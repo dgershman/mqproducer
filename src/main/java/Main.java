@@ -1,37 +1,28 @@
-import com.cinchcast.telephony.commons.connectors.mq.MqConnectionListener;
-import com.cinchcast.telephony.commons.connectors.mq.RabbitConfiguration;
-import com.cinchcast.telephony.commons.connectors.mq.RabbitMqProducer;
+import com.cinchcast.telephony.commons.connectors.mq.MqConnection;
+import com.cinchcast.telephony.commons.connectors.mq.rabbit.RabbitConfiguration;
+import com.cinchcast.telephony.commons.connectors.mq.rabbit.RabbitConnection;
+import com.cinchcast.telephony.commons.connectors.mq.rabbit.RabbitSendOptions;
 
 import java.io.IOException;
-import java.util.Map;
 
 public class Main {
     public static void main(String[] args) {
         RabbitConfiguration config = new RabbitConfiguration("cc-msgq-dev.sip.blogtalkradio.com", 5673, "guest", "guest", "mqp");
-        config.setConnectionListener(new MqConnectionListener() {
-            @Override
-            public void onConnect(Map<String, Object> stringObjectMap) {
-                System.out.println("connected: " + stringObjectMap.get("information"));
-            }
-        });
-        RabbitMqProducer producer = new RabbitMqProducer(config, "com.cinchcast.telephony.mq.exchange");
+        MqConnection producer = new RabbitConnection(config);
 
-        TestMessage message = new TestMessage();
-
-        int x = 1;
-
+        int x = 0;
         try {
             while (true) {
-                message.setMessage("danny" + x);
+                x++;
+                TestMessage message = new TestMessage("test " + x);
 
-                if (producer.trySendMessage(message, "test-key")) {
+                if (producer.send(message, new RabbitSendOptions("test-key", "com.cinchcast.telephony.mq.exchange"))) {
                     System.out.println("message sent: " + message.getMessage());
-                    x++;
                 } else {
-                    System.out.println("could not send message, will retry");
+                    System.out.println("could not send message:" + message.getMessage());
                 }
 
-                Thread.sleep(2000);
+                Thread.sleep(500);
             }
         } catch (InterruptedException ie) {
             ie.printStackTrace();
